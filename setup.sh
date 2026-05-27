@@ -66,13 +66,17 @@ apt-get install -y -qq dialog whois
 echo "Ready."
 echo ""
 
+# Branding string shown at the top of every dialog prompt via --backtitle.
+# Persists across screen redraws; plain text only (no ANSI codes in backtitle).
+BACKTITLE="Kismiter Installer"
+
 # Wrapper around dialog that pins all file descriptors to /dev/tty1 and captures
 # output via a temp file on fd 3. This avoids conflicts with the tee-based
 # logging redirect established above, which would otherwise swallow dialog output.
 dlg() {
   local TMP
   TMP=$(mktemp)
-  dialog --output-fd 3 "$@" 3>"$TMP" </dev/tty1 >/dev/tty1 2>/dev/tty1
+  dialog --backtitle "$BACKTITLE" --output-fd 3 "$@" 3>"$TMP" </dev/tty1 >/dev/tty1 2>/dev/tty1
   cat "$TMP"
   rm -f "$TMP"
 }
@@ -85,7 +89,7 @@ while true; do
   DEFENDER_PASS1=$(dlg --insecure --passwordbox "defender user password" 10 60)
   DEFENDER_PASS2=$(dlg --insecure --passwordbox "Confirm defender password" 10 60)
   [[ "$DEFENDER_PASS1" == "$DEFENDER_PASS2" ]] && break
-  dialog --msgbox "Passwords do not match. Try again." 8 50 \
+  dialog --backtitle "$BACKTITLE" --msgbox "Passwords do not match. Try again." 8 50 \
     </dev/tty1 >/dev/tty1 2>/dev/tty1
 done
 
@@ -93,7 +97,7 @@ while true; do
   LUKS_PASS1=$(dlg --insecure --passwordbox "LUKS full-disk encryption passphrase" 10 60)
   LUKS_PASS2=$(dlg --insecure --passwordbox "Confirm LUKS passphrase" 10 60)
   [[ "$LUKS_PASS1" == "$LUKS_PASS2" ]] && break
-  dialog --msgbox "Passphrases do not match. Try again." 8 50 \
+  dialog --backtitle "$BACKTITLE" --msgbox "Passphrases do not match. Try again." 8 50 \
     </dev/tty1 >/dev/tty1 2>/dev/tty1
 done
 
@@ -452,22 +456,17 @@ YAML
 
 # ── Ubuntu Pro + STIG section ─────────────────────────────────────────────────
 #
-# Subiquity's native ubuntu-pro: stanza attaches the token during the install
-# pass — before late-commands fire — using its own D-Bus-backed attach path.
-# This is authoritative and synchronous: by the time any late-command runs,
-# `pro status` inside the target already shows attached and usg is entitled.
+# Ubuntu Pro attach strategy (confirmed against Subiquity 24.04.4):
 #
-# Consequences of this design:
-#   • No `pro attach` in late-commands — eliminates the silent-failure mode
-#     where the chroot attach returned non-zero but was swallowed by || true.
-#   • No sentinel file (/run/pro-attached) — not needed; Subiquity's attach
-#     either succeeds and the stanza is present, or the stanza is absent.
-#   • No pre-install `pro detach` — that command was actively destroying a
-#     valid attach from the previous install cycle.
+# The ubuntu-pro: stanza is written into autoinstall.yaml and processed by
+# Subiquity during its install pass. However, Subiquity 24.04.4 does NOT
+# propagate this attach into /target — the chroot remains unattached. An
+# explicit `pro attach` in-target is therefore required in late-commands.
+# The stanza is kept as belt-and-suspenders in case future Subiquity versions
+# do propagate it, and because it costs nothing to include.
 #
-# Token validation via curl already ran above in setup.sh (early-commands).
-# The ubuntu-pro: stanza is injected into the YAML here via Python so that
-# indentation is handled programmatically rather than by heredoc alignment.
+# The ubuntu-pro: stanza is injected via Python rather than a heredoc so that
+# indentation is handled programmatically and PRO_TOKEN quoting is clean.
 
 if [ "${PRO_TOKEN}" = "SKIP" ]; then
   # No Pro token — append a GDM banner warning and skip all STIG steps.
@@ -538,10 +537,11 @@ PYEOF
     # usg generate-tailoring syntax (24.04.8): positional args only — profile
     # then output path. No flags. Confirmed from binary:
     #   usage: usg [-h] [-d] profile output
-    # /tmp is used inside the chroot (visible from host as /target/tmp) so sed
-    # can edit via the host-side bind mount without needing to run inside chroot.
+    # /tmp is used inside the chroot (visible from host as /target/tmp). A python3
+    # script is written to /target/tmp and run in-target to patch the attribute
+    # without any double-quote nesting in the YAML/shell quoting chain.
     - curtin in-target --target=/target -- usg generate-tailoring disa_stig /tmp/kismet-tailoring.xml
-    - sh -c 'sed -i "/UBTU-24-600230/s/selected=\"true\"/selected=\"false\"/" /target/tmp/kismet-tailoring.xml'
+    - sh -c 'echo aW1wb3J0IHJlCmY9b3BlbigiL3RhcmdldC90bXAva2lzbWV0LXRhaWxvcmluZy54bWwiKQp0PWYucmVhZCgpCmYuY2xvc2UoKQp0PXJlLnN1YigiKHdpcmVsZXNzX2Rpc2FibGVfaW50ZXJmYWNlc1tePF0qc2VsZWN0ZWQ9KVwidHJ1ZVwiIiwiXFxnPDE+XCJmYWxzZVwiIix0KQpvcGVuKCIvdGFyZ2V0L3RtcC9raXNtZXQtdGFpbG9yaW5nLnhtbCIsInciKS53cml0ZSh0KQo= | base64 -d | python3'
     - curtin in-target --target=/target -- usg fix --tailoring-file /tmp/kismet-tailoring.xml || true
     - curtin in-target --target=/target -- usg audit --tailoring-file /tmp/kismet-tailoring.xml || true
     - sh -c 'mkdir -p /target/root/stig-results-final'

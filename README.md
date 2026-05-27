@@ -1,2 +1,46 @@
-# kismiter
-Tool for baking install ISO of single-purpose, largely STIG-compliant Kismet platform on Ubuntu Server 24.04 LTS (x86_64)
+# Kismiter 
+
+Tool for baking install ISO of single-purpose, largely *STIG-compliant Kismet workstation/platform on Ubuntu Server 24.04 LTS (x86_64) (*Security Technical Implementation Guidelines)
+
+## Components:
+| File                          | Description                                                                                 |
+|-------------------------------|---------------------------------------------------------------------------------------------|
+| `sbom/kismiter.spdx`          | Software Bill of Materials (Ubuntu 24.04 LTS + limited additions)                          |
+| `build-kismet-iso.sh`         | Builds custom Ubuntu Server 24.04 LTS ISO with Ubuntu Subiquity automations                |
+| `setup.sh`                    | Orchestrates most Kismiter customizations applied during Subiquity installer               |
+| `README.md`                   | The document you are currently reading                                                     |
+| `LICENSE`                     | GNU General Public License 3.0                                                             |
+
+## Prerequisites: 
+- A modern Debian-based system recommended, to generate the Kismiter ISO
+- Internet connection capable of downloading the Ubuntu Server ISO 
+- Ubuntu Pro token (required for Ubuntu's official STIG tooling; free) 
+- Wired Ethernet Internet connection for the system being imaged with the ISO 
+
+## Usage: 
+- Download `build-kismet-iso.sh` and `setup.sh`, placing them in the same folder 
+- Run the `build-kismet-iso.sh` script to create the ISO:
+```
+chmod +x build-kismet-iso.sh
+./build-kismet-iso.sh
+```
+- Burn the resulting ISO to a bootable media/USB thumb drive with sufficient free space
+```
+sudo dd if=ubuntu-24.04-kismet-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress oflag=sync conv=fsync
+```
+- Boot the media 
+- Pick a password for the default user
+- Pick a LUKS drive encryption 
+
+## What/Why?: 
+- Ubuntu Server 24.04 LTS for nexus of maximized Kismet and STIG compatibility
+- Rapidly image multiple single-purpose systems for Kismet wireless analysis
+- Minimizing attack surface while providing analyst graphical environment for analysis
+- STIGs pre-applied, SBOM generated, for best-effort compliance (user must manage their own risk)
+- Customizations for commonality with other internal tooling
+
+### Notes:
+- Ubuntu Pro `usg` is used for STIG application to limit additional tooling added to SBOM
+- Ubuntu Pro tokens are attached for STIG application then immediately detached (returned to account) 
+- The shell scripts are separated for simplicity because `setup.sh` is baked into the ISO for Subiquity 
+

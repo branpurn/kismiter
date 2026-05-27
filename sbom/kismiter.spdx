@@ -1,0 +1,416 @@
+SPDXVersion: SPDX-2.3
+DataLicense: CC0-1.0
+SPDXID: SPDXRef-DOCUMENT
+DocumentName: kismet-workstation
+DocumentNamespace: https://kismet-workstation.local/sbom/vm-2026-05-27T17:16:46Z
+Creator: Tool: generate-sbom.sh
+Creator: Organization: kismet-workstation-build
+Created: 2026-05-27T17:16:46Z
+
+##
+## External document reference — Ubuntu 24.04 LTS base manifest
+## The Ubuntu base layer is not enumerated inline. All packages in the
+## Ubuntu 24.04 LTS desktop image are covered by the upstream manifest
+## published by Canonical at the URL below.
+##
+ExternalDocumentRef: DocumentRef-Ubuntu-2404 https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-desktop-amd64.manifest SHA1: 8267e3ae96a8752e6326f2cb53ebc98ca13c6f01
+
+##
+## Relationships
+##
+Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Kismet-Workstation
+Relationship: SPDXRef-Kismet-Workstation DYNAMIC_LINK DocumentRef-Ubuntu-2404:SPDXRef-DOCUMENT
+
+##
+## Top-level package: Kismet Workstation Image
+##
+PackageName: kismet-workstation
+SPDXID: SPDXRef-Kismet-Workstation
+PackageVersion: 20260527
+PackageFileName: kismet-workstation.iso
+PackageSupplier: Organization: kismet-workstation-build
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageSummary: Ubuntu 24.04 LTS-based wireless analysis workstation with Kismet, Wireshark, GNOME, HWE kernel, MediaTek MT7921AUN firmware, and DISA STIG hardening via Ubuntu Pro usg
+PackageComment: Built from Ubuntu 24.04 LTS autoinstall ISO using setup.sh early-command. Base OS layer referenced via ExternalDocumentRef. This package represents the delta installed on top of the Ubuntu 24.04 LTS base.
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+
+##
+## Package 1: firefox
+##
+PackageName: firefox
+SPDXID: SPDXRef-Package-firefox
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.mozilla.org/apt/pool/main/f/firefox/
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/mozilla/firefox
+PackageLicense: MPL-2.0
+PackageLicenseConcluded: MPL-2.0
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Mozilla apt repository (packages.mozilla.org) pinned at priority 1000 to override Ubuntu snap wrapper
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-firefox
+
+##
+## Package 2: gpsd
+##
+PackageName: gpsd
+SPDXID: SPDXRef-Package-gpsd
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/gpsd
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/gpsd?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-gpsd
+
+##
+## Package 3: gpsd-clients
+##
+PackageName: gpsd-clients
+SPDXID: SPDXRef-Package-gpsd-clients
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/gpsd-clients
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/gpsd-clients?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-gpsd-clients
+
+##
+## Package 4: gpsd-tools
+##
+PackageName: gpsd-tools
+SPDXID: SPDXRef-Package-gpsd-tools
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/gpsd-tools
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/gpsd-tools?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-gpsd-tools
+
+##
+## Package 5: kismet
+##
+PackageName: kismet
+SPDXID: SPDXRef-Package-kismet
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://www.kismetwireless.net/repos/apt/release/noble/
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/kismetwireless/kismet
+PackageLicense: GPL-2.0-only
+PackageLicenseConcluded: GPL-2.0-only
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from kismetwireless.net apt repository; SUID install enabled for raw packet capture without root
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-kismet
+
+##
+## Package 6: linux-firmware
+##
+PackageName: linux-firmware
+SPDXID: SPDXRef-Package-linux-firmware
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/linux-firmware
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/linux-firmware?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Reinstalled from Ubuntu archive to ensure latest firmware blobs; supplemented with upstream MediaTek MT7961 blobs from github.com/linux-firmware/linux-firmware
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-linux-firmware
+
+##
+## Package 7: linux-generic-hwe-24.04
+##
+PackageName: linux-generic-hwe-24.04
+SPDXID: SPDXRef-Package-linux-generic-hwe-24.04
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/linux-generic-hwe-24.04
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/linux-generic-hwe-24.04?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-linux-generic-hwe-24.04
+
+##
+## Package 8: nano
+##
+PackageName: nano
+SPDXID: SPDXRef-Package-nano
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/nano
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/nano?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-nano
+
+##
+## Package 9: network-manager
+##
+PackageName: network-manager
+SPDXID: SPDXRef-Package-network-manager
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/network-manager
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/network-manager?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-network-manager
+
+##
+## Package 10: openssh-server
+##
+PackageName: openssh-server
+SPDXID: SPDXRef-Package-openssh-server
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/openssh-server
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/openssh-server?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-openssh-server
+
+##
+## Package 11: plymouth
+##
+PackageName: plymouth
+SPDXID: SPDXRef-Package-plymouth
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/plymouth
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/plymouth?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-plymouth
+
+##
+## Package 12: plymouth-themes
+##
+PackageName: plymouth-themes
+SPDXID: SPDXRef-Package-plymouth-themes
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/plymouth-themes
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/plymouth-themes?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-plymouth-themes
+
+##
+## Package 13: usg
+##
+PackageName: usg
+SPDXID: SPDXRef-Package-usg
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://esm.ubuntu.com/cis/ubuntu/pool/
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/canonical/usg
+PackageLicense: LicenseRef-Canonical-EULA
+PackageLicenseConcluded: LicenseRef-Canonical-EULA
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Ubuntu Security Guide — installed via Ubuntu Pro subscription. Applied DISA STIG V1R1 with tailoring file exempting UBTU-24-600230 (wireless adapter blacklist)
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-usg
+
+##
+## Package 14: vanilla-gnome-default-settings
+##
+PackageName: vanilla-gnome-default-settings
+SPDXID: SPDXRef-Package-vanilla-gnome-default-settings
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/vanilla-gnome-default-settings
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/vanilla-gnome-default-settings?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-vanilla-gnome-default-settings
+
+##
+## Package 15: vanilla-gnome-desktop
+##
+PackageName: vanilla-gnome-desktop
+SPDXID: SPDXRef-Package-vanilla-gnome-desktop
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/vanilla-gnome-desktop
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/vanilla-gnome-desktop?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-vanilla-gnome-desktop
+
+##
+## Package 16: wireshark
+##
+PackageName: wireshark
+SPDXID: SPDXRef-Package-wireshark
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/wireshark
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/wireshark?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-wireshark
+
+##
+## Package 17: zstd
+##
+PackageName: zstd
+SPDXID: SPDXRef-Package-zstd
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/zstd
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/ubuntu/zstd?distro=noble
+PackageLicense: NOASSERTION
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-zstd
+
+##
+## Removed packages — purged during installation
+## Listed for completeness; these are NOT present in the installed system.
+##
+PackageName: byobu
+SPDXID: SPDXRef-Removed-byobu
+PackageVersion: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/byobu
+FilesAnalyzed: false
+PackageLicense: GPL-3.0-only
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Purged during installation — adds unwanted session wrapper to GNOME terminal
+Relationship: SPDXRef-Kismet-Workstation OTHER SPDXRef-Removed-byobu
+
+PackageName: gnome-console
+SPDXID: SPDXRef-Removed-gnome-console
+PackageVersion: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/gnome-console
+FilesAnalyzed: false
+PackageLicense: GPL-3.0-only
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Purged during installation — duplicates gnome-terminal on vanilla GNOME
+Relationship: SPDXRef-Kismet-Workstation OTHER SPDXRef-Removed-gnome-console
+
+PackageName: cloud-init
+SPDXID: SPDXRef-Removed-cloud-init
+PackageVersion: NOASSERTION
+PackageDownloadLocation: https://packages.ubuntu.com/noble/cloud-init
+FilesAnalyzed: false
+PackageLicense: GPL-3.0-only
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Purged during installation — not needed outside cloud environments
+Relationship: SPDXRef-Kismet-Workstation OTHER SPDXRef-Removed-cloud-init
+
+##
+## Firmware artifacts — not installed via apt
+##
+PackageName: WIFI_MT7961_patch_mcu_1_2_hdr.bin
+SPDXID: SPDXRef-Firmware-MT7961-patch
+PackageVersion: NOASSERTION
+PackageSupplier: Organization: MediaTek
+PackageDownloadLocation: https://github.com/linux-firmware/linux-firmware/raw/main/mediatek/WIFI_MT7961_patch_mcu_1_2_hdr.bin
+FilesAnalyzed: false
+ExternalRef: OTHER url https://github.com/linux-firmware/linux-firmware/tree/main/mediatek
+PackageLicense: LicenseRef-MediaTek-Firmware
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: MediaTek MT7921AUN (Alfa AWUS036AXML) firmware blob. Fetched from upstream linux-firmware git; falls back to decompressing .zst blob from linux-firmware package if fetch fails.
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Firmware-MT7961-patch
+
+PackageName: WIFI_RAM_CODE_MT7961_1.bin
+SPDXID: SPDXRef-Firmware-MT7961-ram
+PackageVersion: NOASSERTION
+PackageSupplier: Organization: MediaTek
+PackageDownloadLocation: https://github.com/linux-firmware/linux-firmware/raw/main/mediatek/WIFI_RAM_CODE_MT7961_1.bin
+FilesAnalyzed: false
+ExternalRef: OTHER url https://github.com/linux-firmware/linux-firmware/tree/main/mediatek
+PackageLicense: LicenseRef-MediaTek-Firmware
+PackageLicenseConcluded: NOASSERTION
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: MediaTek MT7921AUN (Alfa AWUS036AXML) RAM firmware blob. Fetched from upstream linux-firmware git; falls back to decompressing .zst blob from linux-firmware package if fetch fails.
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Firmware-MT7961-ram
+
+##
+## Configuration artifact — DISA STIG tailoring file
+##
+PackageName: kismet-tailoring.xml
+SPDXID: SPDXRef-STIG-Tailoring
+PackageVersion: NOASSERTION
+PackageSupplier: Organization: kismet-workstation-build
+PackageDownloadLocation: NOASSERTION
+FilesAnalyzed: false
+PackageLicense: CC0-1.0
+PackageLicenseConcluded: CC0-1.0
+PackageLicenseDeclared: CC0-1.0
+PackageCopyrightText: NOASSERTION
+PackageComment: DISA STIG V1R1 XCCDF tailoring file generated by usg generate-tailoring disa_stig. UBTU-24-600230 (wireless adapter blacklist) deselected — this system is a wireless analysis platform. Stored at /root/stig-results-final/kismet-tailoring.xml on the installed system.
+Relationship: SPDXRef-Kismet-Workstation GENERATED_FROM SPDXRef-STIG-Tailoring
+
