@@ -2,10 +2,10 @@ SPDXVersion: SPDX-2.3
 DataLicense: CC0-1.0
 SPDXID: SPDXRef-DOCUMENT
 DocumentName: kismet-workstation
-DocumentNamespace: https://kismet-workstation.local/sbom/vm-2026-05-27T17:16:46Z
+DocumentNamespace: https://kismet-workstation.local/sbom/vm-2026-05-28T13:07:47Z
 Creator: Tool: generate-sbom.sh
 Creator: Organization: kismet-workstation-build
-Created: 2026-05-27T17:16:46Z
+Created: 2026-05-28T13:07:47Z
 
 ##
 ## External document reference — Ubuntu 24.04 LTS base manifest
@@ -26,7 +26,7 @@ Relationship: SPDXRef-Kismet-Workstation DYNAMIC_LINK DocumentRef-Ubuntu-2404:SP
 ##
 PackageName: kismet-workstation
 SPDXID: SPDXRef-Kismet-Workstation
-PackageVersion: 20260527
+PackageVersion: 20260528
 PackageFileName: kismet-workstation.iso
 PackageSupplier: Organization: kismet-workstation-build
 PackageDownloadLocation: NOASSERTION
@@ -56,7 +56,24 @@ PackageComment: Installed from Mozilla apt repository (packages.mozilla.org) pin
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-firefox
 
 ##
-## Package 2: gpsd
+## Package 2: google-earth-pro-stable
+##
+PackageName: google-earth-pro-stable
+SPDXID: SPDXRef-Package-google-earth-pro-stable
+PackageVersion: NOASSERTION
+PackageSupplier: NOASSERTION
+PackageDownloadLocation: https://dl.google.com/linux/earth/deb/pool/main/g/google-earth-pro-stable/
+FilesAnalyzed: false
+ExternalRef: PACKAGE-MANAGER purl pkg:deb/google/google-earth-pro-stable
+PackageLicense: LicenseRef-Google-Earth-EULA
+PackageLicenseConcluded: LicenseRef-Google-Earth-EULA
+PackageLicenseDeclared: NOASSERTION
+PackageCopyrightText: NOASSERTION
+PackageComment: Installed from Google apt repository (dl.google.com/linux/earth/deb); used for KML/KMZ viewing of Kismet wireless survey output. Signing key: dl-ssl.google.com/linux/linux_signing_key.pub
+Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-google-earth-pro-stable
+
+##
+## Package 3: gpsd
 ##
 PackageName: gpsd
 SPDXID: SPDXRef-Package-gpsd
@@ -73,7 +90,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-gpsd
 
 ##
-## Package 3: gpsd-clients
+## Package 4: gpsd-clients
 ##
 PackageName: gpsd-clients
 SPDXID: SPDXRef-Package-gpsd-clients
@@ -90,7 +107,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-gpsd-clients
 
 ##
-## Package 4: gpsd-tools
+## Package 5: gpsd-tools
 ##
 PackageName: gpsd-tools
 SPDXID: SPDXRef-Package-gpsd-tools
@@ -107,7 +124,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-gpsd-tools
 
 ##
-## Package 5: kismet
+## Package 6: kismet
 ##
 PackageName: kismet
 SPDXID: SPDXRef-Package-kismet
@@ -124,7 +141,7 @@ PackageComment: Installed from kismetwireless.net apt repository; SUID install e
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-kismet
 
 ##
-## Package 6: linux-firmware
+## Package 7: linux-firmware
 ##
 PackageName: linux-firmware
 SPDXID: SPDXRef-Package-linux-firmware
@@ -141,7 +158,7 @@ PackageComment: Reinstalled from Ubuntu archive to ensure latest firmware blobs;
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-linux-firmware
 
 ##
-## Package 7: linux-generic-hwe-24.04
+## Package 8: linux-generic-hwe-24.04
 ##
 PackageName: linux-generic-hwe-24.04
 SPDXID: SPDXRef-Package-linux-generic-hwe-24.04
@@ -158,7 +175,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-linux-generic-hwe-24.04
 
 ##
-## Package 8: nano
+## Package 9: nano
 ##
 PackageName: nano
 SPDXID: SPDXRef-Package-nano
@@ -175,7 +192,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-nano
 
 ##
-## Package 9: network-manager
+## Package 10: network-manager
 ##
 PackageName: network-manager
 SPDXID: SPDXRef-Package-network-manager
@@ -192,7 +209,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-network-manager
 
 ##
-## Package 10: openssh-server
+## Package 11: openssh-server
 ##
 PackageName: openssh-server
 SPDXID: SPDXRef-Package-openssh-server
@@ -209,7 +226,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-openssh-server
 
 ##
-## Package 11: plymouth
+## Package 12: plymouth
 ##
 PackageName: plymouth
 SPDXID: SPDXRef-Package-plymouth
@@ -226,7 +243,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-plymouth
 
 ##
-## Package 12: plymouth-themes
+## Package 13: plymouth-themes
 ##
 PackageName: plymouth-themes
 SPDXID: SPDXRef-Package-plymouth-themes
@@ -243,7 +260,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-plymouth-themes
 
 ##
-## Package 13: usg
+## Package 14: usg
 ##
 PackageName: usg
 SPDXID: SPDXRef-Package-usg
@@ -260,7 +277,7 @@ PackageComment: Ubuntu Security Guide — installed via Ubuntu Pro subscription.
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-usg
 
 ##
-## Package 14: vanilla-gnome-default-settings
+## Package 15: vanilla-gnome-default-settings
 ##
 PackageName: vanilla-gnome-default-settings
 SPDXID: SPDXRef-Package-vanilla-gnome-default-settings
@@ -277,7 +294,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-vanilla-gnome-default-settings
 
 ##
-## Package 15: vanilla-gnome-desktop
+## Package 16: vanilla-gnome-desktop
 ##
 PackageName: vanilla-gnome-desktop
 SPDXID: SPDXRef-Package-vanilla-gnome-desktop
@@ -294,7 +311,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-vanilla-gnome-desktop
 
 ##
-## Package 16: wireshark
+## Package 17: wireshark
 ##
 PackageName: wireshark
 SPDXID: SPDXRef-Package-wireshark
@@ -311,7 +328,7 @@ PackageComment: Installed from Ubuntu 24.04 LTS (noble) archive
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-wireshark
 
 ##
-## Package 17: zstd
+## Package 18: zstd
 ##
 PackageName: zstd
 SPDXID: SPDXRef-Package-zstd

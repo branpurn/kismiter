@@ -5,7 +5,7 @@ Tool for baking install ISO of single-purpose, largely *STIG-compliant Kismet wo
 ## Components:
 | File                          | Description                                                                                 |
 |-------------------------------|---------------------------------------------------------------------------------------------|
-| `sbom/kismiter.spdx`          | Software Bill of Materials (Ubuntu 24.04 LTS + limited additions)                          |
+| `sbom/kismiter-sbom.spdx`     | Software Bill of Materials (Ubuntu 24.04 LTS + limited additions)                          |
 | `build-kismet-iso.sh`         | Builds custom Ubuntu Server 24.04 LTS ISO with Ubuntu Subiquity automations                |
 | `setup.sh`                    | Orchestrates most Kismiter customizations applied during Subiquity installer               |
 | `README.md`                   | The document you are currently reading                                                     |
@@ -35,6 +35,14 @@ sudo dd if=ubuntu-24.04-kismet-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress of
 - Prompt for Ubuntu Pro token (skip to omit STIGs)
 - Walk away, return to completed install (LUKS prompt to decrypt)
 
+## Primary Tools:
+- `kismet` for wireless collection and analysis
+- `wireshark` for viewing Kismet PCAPNG output
+- `google-earth-pro-stable` for viewing Kismet KML map output
+- `firefox` for viewing Kismet GUI and opening Kismet JSON files
+- Misc. from `vanilla-gnome-desktop` (ex., Libreoffice for viewing CSV)
+- Misc. from Ubuntu Server 24.04 LTS (standard GNU tools, `tmux`, etc.)
+
 ## What/Why?: 
 - Rapidly image multiple single-purpose systems for Kismet wireless analysis
 - Ubuntu Server 24.04 LTS for nexus of maximized stability, and Kismet and STIG compatibility
@@ -43,9 +51,10 @@ sudo dd if=ubuntu-24.04-kismet-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress of
 - STIGs pre-applied, SBOM generated, for best-effort compliance (user must manage their own risk)
 - Removes unneeded Ubuntu junk  (`cloud-init`, `systemd-networkd-wait-online`, Yaru, etc.)
 - Adds minimal required Kismet hardware support (ex., `gpsd`, `linux-generic-hwe-24.04` for drivers)
-- Adds important quality-of-life tooling (ex., `wireshark`, `nano`, non-snap `firefox`, etc.) 
+- Adds important quality-of-life tooling (ex., `wireshark`, `nano`, non-snap `firefox`, Google Earth, etc.) 
 - Adds default user to all the necessary groups (`kismet`, `wireshark`, `dialout`, etc.)
-- Wired Ethernet DHCP assumed during setup to K.I.S.S. (drop to another TTY if you want WiFi)
+- Wired Ethernet DHCP assumed during setup to K.I.S.S. (drop to another TTY to enable WiFi)
+- Install pulls latest from official vetted repos versus baking offline install into media 
 - Customizations for commonality with other internal tooling
 
 ### Notes:

@@ -37,7 +37,7 @@ systemctl disable --now \
 clear
 echo ""
 echo "================================================================"
-echo "  Kismiter — Interactive pre-install configuration"
+echo "  Kismet — Interactive pre-install configuration"
 echo "================================================================"
 echo ""
 
@@ -408,6 +408,16 @@ autoinstall:
     # members of the wireshark group to open capture interfaces without sudo.
     - curtin in-target --target=/target -- sh -c 'echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections'
     - curtin in-target --target=/target -- apt-get install -y wireshark
+
+    # Google Earth Pro — KML/KMZ viewing for Kismet wireless survey output.
+    # Key fetched via wget and dearmored directly into /etc/apt/keyrings to
+    # follow current Debian policy (no deprecated apt-key). The source list
+    # uses signed-by to scope trust to this key only.
+    - curtin in-target --target=/target -- sh -c 'mkdir -p /etc/apt/keyrings'
+    - curtin in-target --target=/target -- sh -c 'wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /etc/apt/keyrings/google-earth.gpg'
+    - curtin in-target --target=/target -- sh -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-earth.gpg] https://dl.google.com/linux/earth/deb/ stable main" > /etc/apt/sources.list.d/google-earth.list'
+    - curtin in-target --target=/target -- apt-get update
+    - curtin in-target --target=/target -- apt-get install -y google-earth-pro-stable
 
     # Add defender to all groups that gate privileged hardware access:
     #   kismet    — raw packet capture via Kismet without sudo
