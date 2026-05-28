@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# build-kismet-iso.sh — Repackages the official Ubuntu 24.04 live-server ISO
+# build-kismiter-iso.sh — Repackages the official Ubuntu 24.04 live-server ISO
 # into a custom installer that runs setup.sh as an early-command. setup.sh
 # prompts the operator interactively for hostname, passwords, and an optional
 # Ubuntu Pro token, then generates a complete autoinstall.yaml that subiquity
@@ -10,7 +10,7 @@ set -euo pipefail
 
 WORK_DIR="iso-work"
 DATESTAMP=$(date +%Y%m%d)
-OUTPUT_ISO="ubuntu-24.04-kismet-${DATESTAMP}.iso"
+OUTPUT_ISO="ubuntu-24.04-kismiter-${DATESTAMP}.iso"
 
 # Remove the working directory and any partial output ISO on failure. Partial
 # xorriso output files are treated as fixed-size media on the next run, causing
@@ -78,11 +78,11 @@ fi
 # accumulate silently and consume disk space; the cleanup trap only removes
 # the current build's file, not older ones. Offer to delete them now so the
 # disk-space preflight below sees accurate free space.
-OLD_ISOS=$(ls ubuntu-24.04-kismet-*.iso 2>/dev/null \
+OLD_ISOS=$(ls ubuntu-24.04-kismiter-*.iso 2>/dev/null \
            | grep -v "^${OUTPUT_ISO}$" || true)
 if [[ -n "$OLD_ISOS" ]]; then
   echo ""
-  echo "=== Old Kismet ISO(s) found ==="
+  echo "=== Old Kismiter ISO(s) found ==="
   du -sh $OLD_ISOS
   read -rp "Delete them to free disk space before building? (Y/n): " CONFIRM
   if [[ ! "$CONFIRM" =~ ^[Nn] ]]; then
@@ -115,7 +115,7 @@ if (( AVAILABLE_BYTES < REQUIRED_BYTES )); then
   echo "ERROR: Insufficient disk space."
   echo "  Need ${REQ_MB} MB, have ${AVL_MB} MB."
   echo "  Free at least $(( (REQUIRED_BYTES - AVAILABLE_BYTES) / 1024 / 1024 )) MB and retry."
-  echo "  Tip: old Kismet ISOs in this directory are the most likely culprit."
+  echo "  Tip: old Kismiter ISOs in this directory are the most likely culprit."
   exit 1
 fi
 echo "  Disk space OK."
@@ -314,7 +314,7 @@ touch "${WORK_DIR}/nocloud/meta-data"
 sudo tee "${WORK_DIR}/boot/grub/grub.cfg" > /dev/null << 'GRUB'
 set timeout=5
 
-menuentry "Kismet installer (automated)" {
+menuentry "Kismiter installer (automated)" {
   set gfxpayload=keep
   linux /casper/vmlinuz quiet splash autoinstall ds=nocloud\;s=/cdrom/nocloud/ ---
   initrd /casper/initrd
@@ -333,7 +333,7 @@ echo "Repacking into ${OUTPUT_ISO} ..."
 # from a previous failed build would cause xorriso to refuse writing a larger
 # image into it.
 rm -f "${OUTPUT_ISO}"
-xorriso -as mkisofs -r -V "Ubuntu 24.04 Kismet STIG" \
+xorriso -as mkisofs -r -V "Ubuntu 24.04 Kismiter STIG" \
   -J -l \
   -o "${OUTPUT_ISO}" \
   -b "${BIOS_IMG}" \
