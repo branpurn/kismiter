@@ -188,6 +188,8 @@ cat > /autoinstall.yaml << YAML
 #cloud-config
 autoinstall:
   version: 1
+  source:
+    id: ubuntu-server-minimal
   locale: en_US.UTF-8
   keyboard:
     layout: us
