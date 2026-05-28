@@ -37,7 +37,7 @@ systemctl disable --now \
 clear
 echo ""
 echo "================================================================"
-echo "  Kismet — Interactive pre-install configuration"
+echo "  Kismiter — Interactive pre-install configuration"
 echo "================================================================"
 echo ""
 

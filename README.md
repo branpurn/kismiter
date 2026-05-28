@@ -29,14 +29,21 @@ chmod +x build-kismet-iso.sh
 sudo dd if=ubuntu-24.04-kismet-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress oflag=sync conv=fsync
 ```
 - Boot the media 
-- Pick a password for the default user
-- Pick a LUKS drive encryption 
+- Prompt for new hostname if desired
+- Prompt for password for the default user
+- Prompt for a LUKS drive encryption passphrase
+- Prompt for Ubuntu Pro token (skip to omit STIGs)
 
 ## What/Why?: 
 - Ubuntu Server 24.04 LTS for nexus of maximized Kismet and STIG compatibility
 - Rapidly image multiple single-purpose systems for Kismet wireless analysis
-- Minimizing attack surface while providing analyst graphical environment for analysis
+- Minimizing attack surface (Ubuntu Server minimal install, add specific desired components)
+- Providing analyst graphical environment for analysis versus headless with remote connection need
 - STIGs pre-applied, SBOM generated, for best-effort compliance (user must manage their own risk)
+- Removes unneeded Ubuntu junk  (`cloud-init`, `systemd-networkd-wait-online`, Yaru, etc.)
+- Adds minimal required Kismet hardware support (ex., `gpsd`, `linux-generic-hwe-24.04` for drivers)
+- Adds important quality-of-life tooling (ex., `wireshark`, `nano`, non-snap `firefox`, etc.) 
+- Adds default user to all the necessary groups (`kismet`, `wireshark`, `dialout`, etc.)
 - Customizations for commonality with other internal tooling
 
 ### Notes:
