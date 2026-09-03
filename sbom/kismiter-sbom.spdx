@@ -128,16 +128,16 @@ Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-gpsd-tools
 ##
 PackageName: kismet
 SPDXID: SPDXRef-Package-kismet
-PackageVersion: NOASSERTION
-PackageSupplier: NOASSERTION
-PackageDownloadLocation: https://www.kismetwireless.net/repos/apt/release/noble/
+PackageVersion: git-HEAD
+PackageSupplier: Organization: kismetwireless
+PackageDownloadLocation: git+https://www.kismetwireless.net/git/kismet.git
 FilesAnalyzed: false
-ExternalRef: PACKAGE-MANAGER purl pkg:deb/kismetwireless/kismet
+ExternalRef: PACKAGE-MANAGER purl pkg:generic/kismet?vcs_url=https://www.kismetwireless.net/git/kismet.git
 PackageLicense: GPL-2.0-only
 PackageLicenseConcluded: GPL-2.0-only
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NOASSERTION
-PackageComment: Installed from kismetwireless.net apt repository; SUID install enabled for raw packet capture without root
+PackageComment: Compiled from upstream git during autoinstall late-commands (before STIG) with every Linux-applicable datasource/feature enabled (--enable-protobuf, --enable-wifi-coconut, --enable-bladerf, and all auto-detected capture helpers). make suidinstall for raw packet capture without root. Install aborts if configure omits a required feature. Git revision recorded at /usr/local/share/kismet/kismiter-git-revision; configure summary at kismiter-configure-summary.txt. Build toolchain removed after install; runtime libraries retained from Ubuntu 24.04 archive.
 Relationship: SPDXRef-Kismet-Workstation CONTAINS SPDXRef-Package-kismet
 
 ##

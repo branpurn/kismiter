@@ -395,15 +395,236 @@ autoinstall:
     - curtin in-target --target=/target -- apt-get remove --purge -y firefox || true
     - curtin in-target --target=/target -- apt-get install -y firefox
 
-    # Kismet wireless network detector and packet capture tool. The SUID install
-    # allows Kismet to open raw packet capture interfaces without running the
-    # entire application as root. The kismet group gates access to that binary.
-    - curtin in-target --target=/target -- sh -c 'wget -qO- https://www.kismetwireless.net/repos/kismet-release.gpg.key | gpg --dearmor > /usr/share/keyrings/kismet-archive-keyring.gpg'
-    - curtin in-target --target=/target -- sh -c 'echo "deb [signed-by=/usr/share/keyrings/kismet-archive-keyring.gpg] https://www.kismetwireless.net/repos/apt/release/noble noble main" > /etc/apt/sources.list.d/kismet.list'
-    - curtin in-target --target=/target -- apt-get update
-    - curtin in-target --target=/target -- sh -c 'echo "kismet kismet/install-suid boolean true" | debconf-set-selections'
-    - curtin in-target --target=/target -- apt-get install -y kismet
+YAML
 
+# Kismet is compiled from upstream git. This block is a quoted heredoc so
+# $(...) and $vars in the build script are not expanded by setup.sh. The
+# kismet .deb is intentionally not installed: it does not pull compile-time
+# -dev headers, it lands in /usr while source installs to /usr/local, and
+# Kismet's docs say mixed package+source installs interfere.
+cat >> /autoinstall.yaml << 'YAML_KISMET'
+    # Kismet from upstream git (latest), compiled here — before STIG hardening.
+    # usg fix breaks compiling (noexec mounts, compiler policy, etc.); do not
+    # move this after the Ubuntu Pro / usg late-commands.
+    # /tmp is noexec on this image, so the build uses TMPDIR=/var/tmp.
+    # make suidinstall creates the kismet group and SUID capture helpers.
+    - |
+      mkdir -p /target/usr/src
+      cat > /target/usr/src/kismiter-build-kismet.sh << 'KISMET_BUILD'
+      #!/bin/bash
+      set -euo pipefail
+      export DEBIAN_FRONTEND=noninteractive
+      export TMPDIR=/var/tmp
+      mkdir -p /var/tmp /usr/local/share/kismet
+
+      echo "Installing Kismet build dependencies from Ubuntu archive..."
+      apt-get install -y \
+        build-essential git pkg-config binutils-dev \
+        libwebsockets-dev zlib1g-dev libnl-3-dev libnl-genl-3-dev \
+        libcap-dev libpcap-dev libnm-dev libdw-dev libsqlite3-dev \
+        libsensors-dev libusb-1.0-0-dev libubertooth-dev libbtbb-dev \
+        libmosquitto-dev librtlsdr-dev libssl-dev libpcre2-dev libpcre3-dev \
+        libprotobuf-dev libprotobuf-c-dev protobuf-compiler protobuf-c-compiler \
+        libbladerf-dev \
+        python3 python3-setuptools python3-protobuf python3-requests \
+        python3-numpy python3-serial python3-usb python3-dev python3-websockets \
+        rtl-433
+
+      echo "Cloning Kismet (latest git)..."
+      rm -rf /usr/src/kismet
+      git clone --depth 1 https://www.kismetwireless.net/git/kismet.git /usr/src/kismet \
+        || git clone --depth 1 https://github.com/kismetwireless/kismet.git /usr/src/kismet
+
+      cd /usr/src/kismet
+
+      # Explicit --enable for every Linux-applicable optional feature. Kismet
+      # defaults several datasources off (Hak5 Coconut, bladeRF-wiphy, protobuf
+      # remote capture). Auto-detected features that fail become WARN + omit
+      # unless we abort after checking Makefile / config.h.
+      # Not passed (upstream has removed or commented them out of the build):
+      #   --enable-python-tools / --enable-btgeiger  (Makefile targets commented;
+      #     configure summary hardcodes "Python Modules: no (deprecated)")
+      #   HackRF sweep (configure libhackrf checks are commented out)
+      #   --enable-prelude (Prelude SIEM check is commented out)
+      echo "Configuring Kismet with all Linux features enabled..."
+      ./configure \
+        --enable-protobuf \
+        --enable-wifi-coconut \
+        --enable-bladerf \
+        --enable-require-pcre2 \
+        --enable-pcre \
+        --enable-libwebsockets \
+        --enable-libusb \
+        --enable-ubertooth \
+        --enable-librtlsdr \
+        --enable-mosquitto \
+        --enable-lmsensors \
+        --enable-libnm \
+        --enable-libcap \
+        --enable-linuxwext \
+        --enable-debuglibs \
+        2>&1 | tee /usr/local/share/kismet/kismiter-configure.log
+
+      require_make_flag() {
+        local name="$1"
+        local val
+        val=$(sed -n "s/^${name} = //p" Makefile | head -1 | tr -d '[:space:]')
+        if [ "$val" != 1 ]; then
+          echo "ERROR: required Kismet feature ${name} is '${val:-unset}' (expected 1)"
+          echo "configure summary (tail):"
+          sed -n '/Configuration complete:/,$p' /usr/local/share/kismet/kismiter-configure.log || true
+          return 1
+        fi
+        echo "  OK ${name}=1"
+      }
+
+      require_config_h() {
+        local name="$1"
+        if ! grep -qE "^#define ${name}( |$)" config.h; then
+          echo "ERROR: config.h is missing ${name} — feature was omitted"
+          return 1
+        fi
+        echo "  OK config.h ${name}"
+      }
+
+      echo "Verifying every Linux-applicable Kismet feature is enabled..."
+      require_make_flag BUILD_CAPTURE_PCAPFILE
+      require_make_flag BUILD_CAPTURE_KISMETDB
+      require_make_flag BUILD_CAPTURE_LINUX_WIFI
+      require_make_flag BUILD_CAPTURE_LINUX_BLUETOOTH
+      require_make_flag BUILD_CAPTURE_NRF_MOUSEJACK
+      require_make_flag BUILD_CAPTURE_TI_CC_2540
+      require_make_flag BUILD_CAPTURE_TI_CC_2531
+      require_make_flag BUILD_CAPTURE_UBERTOOTH_ONE
+      require_make_flag BUILD_CAPTURE_SDR_RTL433V2
+      require_make_flag BUILD_CAPTURE_SDR_RTLADSBV2
+      require_make_flag BUILD_CAPTURE_FREAKLABS_ZIGBEEV2
+      require_make_flag BUILD_CAPTURE_NRF_51822
+      require_make_flag BUILD_CAPTURE_NXP_KW41Z
+      require_make_flag BUILD_CAPTURE_RZ_KILLERBEE
+      require_make_flag BUILD_CAPTURE_NRF_52840
+      require_make_flag BUILD_CAPTURE_HAK5_COCONUT
+      require_make_flag BUILD_CAPTURE_SERIAL_RADVIEW
+      require_make_flag BUILD_CAPTURE_USB_RADIACODE
+      require_make_flag BUILD_CAPTURE_ANTSDR_DRONEID
+      require_make_flag BUILD_CAPTURE_CATSNIFFER_ZIGBEE
+      require_make_flag BUILD_CAPTURE_SNIFFLE_BLE
+      require_make_flag BUILD_CAPTURE_WCH_BLE_ANALYZER_PRO
+      require_make_flag BUILD_CAPTURE_BLADERF_WIPHY
+
+      require_config_h HAVE_LIBPCRE2
+      require_config_h HAVE_CAPABILITY
+      require_config_h HAVE_LINUX_WIRELESS
+      require_config_h HAVE_LINUX_NETLINK
+      require_config_h HAVE_LIBNL
+      require_config_h HAVE_LIBNM
+      require_config_h HAVE_LIBWEBSOCKETS
+      require_config_h HAVE_LIBPCAP
+      require_config_h HAVE_LIBSQLITE3
+      require_config_h HAVE_PROTOBUF_CPP
+      require_config_h HAVE_LIBBLADERF
+      require_config_h HAVE_LIBMOSQUITTO
+      require_config_h HAVE_OPENSSL
+      require_config_h HAVE_GPS
+
+      if grep -q '^\*\*\* WARNING \*\*\*' /usr/local/share/kismet/kismiter-configure.log; then
+        echo "ERROR: ./configure printed WARNING — a Linux feature was omitted"
+        grep -A6 '^\*\*\* WARNING \*\*\*' /usr/local/share/kismet/kismiter-configure.log
+        exit 1
+      fi
+      sed -n '/Configuration complete:/,$p' /usr/local/share/kismet/kismiter-configure.log \
+        > /usr/local/share/kismet/kismiter-configure-summary.txt
+      echo "All required Kismet features enabled."
+
+      echo "Compiling Kismet..."
+      JOBS=$(nproc)
+      MEM_GB=$(( $(awk '/MemAvailable:/ {print $2}' /proc/meminfo) / 1024 / 1024 ))
+      MAX_BY_MEM=$(( MEM_GB / 2 ))
+      [ "$MAX_BY_MEM" -lt 1 ] && MAX_BY_MEM=1
+      [ "$JOBS" -gt "$MAX_BY_MEM" ] && JOBS=$MAX_BY_MEM
+      echo "Using $JOBS parallel jobs (nproc=$(nproc), MemAvailable=${MEM_GB}G)"
+      make -j"$JOBS"
+      make suidinstall
+
+      echo "Verifying capture helpers were installed..."
+      missing=0
+      for bin in \
+        kismet \
+        kismet_cap_pcapfile \
+        kismet_cap_kismetdb \
+        kismet_cap_linux_wifi \
+        kismet_cap_linux_bluetooth \
+        kismet_cap_nrf_mousejack \
+        kismet_cap_ti_cc_2540 \
+        kismet_cap_ti_cc_2531 \
+        kismet_cap_ubertooth_one \
+        kismet_cap_nrf_51822 \
+        kismet_cap_nrf_52840 \
+        kismet_cap_nxp_kw41z \
+        kismet_cap_rz_killerbee \
+        kismet_cap_bladerf_wiphy \
+        kismet_cap_hak5_wifi_coconut \
+        kismet_cap_serial_radview \
+        kismet_cap_radiacode_usb \
+        kismet_cap_sdr_rtl433 \
+        kismet_cap_sdr_rtladsb \
+        kismet_cap_freaklabs_zigbee \
+        kismet_cap_catsniffer_zigbee \
+        kismet_cap_sniffle_ble \
+        kismet_cap_antsdr_droneid \
+        kismet_cap_wch_ble_analyzer_pro
+      do
+        if [ ! -x "/usr/local/bin/${bin}" ]; then
+          echo "ERROR: missing installed binary /usr/local/bin/${bin}"
+          missing=1
+        fi
+      done
+      if [ "$missing" -ne 0 ]; then
+        echo "Installed kismet* binaries:"
+        ls -l /usr/local/bin/kismet* || true
+        exit 1
+      fi
+      echo "All expected Kismet binaries present."
+
+      git rev-parse HEAD > /usr/local/share/kismet/kismiter-git-revision
+      git log -1 --format='%H %cI %s' > /usr/local/share/kismet/kismiter-git-log || true
+      echo "Kismet git revision: $(cat /usr/local/share/kismet/kismiter-git-revision)"
+
+      echo "Marking runtime libraries used by installed Kismet binaries..."
+      runtime_pkgs=""
+      for bin in /usr/local/bin/kismet*; do
+        [ -f "$bin" ] || continue
+        while read -r so; do
+          [ -n "$so" ] || continue
+          pkg=$(dpkg -S "$so" 2>/dev/null | awk -F: '{print $1}' | head -1) || true
+          [ -n "$pkg" ] && runtime_pkgs="${runtime_pkgs} ${pkg}"
+        done < <(ldd "$bin" 2>/dev/null | awk '/=> \// {print $3}')
+      done
+      runtime_pkgs="${runtime_pkgs} rtl-433 python3 python3-setuptools python3-protobuf python3-requests python3-numpy python3-serial python3-usb python3-websockets libbladerf2"
+      # shellcheck disable=SC2086
+      apt-mark manual $runtime_pkgs >/dev/null 2>&1 || true
+
+      cd /
+      rm -rf /usr/src/kismet
+
+      echo "Removing Kismet build toolchain (runtime libraries kept)..."
+      apt-get purge -y \
+        build-essential dpkg-dev git pkg-config binutils-dev \
+        protobuf-compiler protobuf-c-compiler python3-dev \
+        libwebsockets-dev zlib1g-dev libnl-3-dev libnl-genl-3-dev \
+        libcap-dev libpcap-dev libnm-dev libdw-dev libsqlite3-dev \
+        libsensors-dev libusb-1.0-0-dev libubertooth-dev libbtbb-dev \
+        libmosquitto-dev librtlsdr-dev libssl-dev libpcre2-dev libpcre3-dev \
+        libprotobuf-dev libprotobuf-c-dev libbladerf-dev
+      apt-get autoremove -y
+
+      rm -f /usr/src/kismiter-build-kismet.sh
+      echo "Kismet source install complete."
+      KISMET_BUILD
+    - curtin in-target --target=/target -- bash /usr/src/kismiter-build-kismet.sh
+YAML_KISMET
+
+cat >> /autoinstall.yaml << 'YAML_POST_KISMET'
     # Wireshark GUI and CLI packet analysis. The install-setuid selection allows
     # members of the wireshark group to open capture interfaces without sudo.
     - curtin in-target --target=/target -- sh -c 'echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections'
@@ -448,12 +669,12 @@ autoinstall:
     # (EINVAL) at firmware load time.
     - |
       FWDIR=/target/lib/firmware/mediatek
-      mkdir -p \$FWDIR
+      mkdir -p $FWDIR
       BASE=https://github.com/linux-firmware/linux-firmware/raw/main/mediatek
       for FW in WIFI_MT7961_patch_mcu_1_2_hdr.bin WIFI_RAM_CODE_MT7961_1.bin; do
-        wget -q -O \$FWDIR/\$FW \$BASE/\$FW || true
-        if [ ! -s \$FWDIR/\$FW ]; then
-          zstd -d \$FWDIR/\${FW}.zst -o \$FWDIR/\$FW --force || true
+        wget -q -O $FWDIR/$FW $BASE/$FW || true
+        if [ ! -s $FWDIR/$FW ]; then
+          zstd -d $FWDIR/${FW}.zst -o $FWDIR/$FW --force || true
         fi
       done
 
@@ -462,7 +683,7 @@ autoinstall:
     - curtin in-target --target=/target -- apt-get purge -y cloud-init
     - curtin in-target --target=/target -- apt-get autoremove -y
 
-YAML
+YAML_POST_KISMET
 
 # ── Ubuntu Pro + STIG section ─────────────────────────────────────────────────
 #

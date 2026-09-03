@@ -47,7 +47,7 @@ sudo dd if=ubuntu-24.04-kismiter-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress 
 
 ## Primary Tools:
 
-- `kismet` for wireless collection and analysis
+- `kismet` for wireless collection and analysis (compiled from upstream git at install time)
 - `wireshark` for viewing Kismet PCAPNG output
 - `google-earth-pro-stable` for viewing Kismet KML map output
 - `firefox` for viewing Kismet GUI and opening Kismet JSON files
@@ -64,9 +64,10 @@ sudo dd if=ubuntu-24.04-kismiter-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress 
 - Removes unneeded Ubuntu junk  (`cloud-init`, `systemd-networkd-wait-online`, Yaru, etc.)
 - Adds minimal required Kismet hardware support (ex., `gpsd`, `linux-generic-hwe-24.04` for drivers)
 - Adds important quality-of-life tooling (ex., `wireshark`, non-snap `firefox`, Google Earth, etc.) 
+- Builds Kismet from upstream git (latest) before STIG hardening — STIGs break compiling. `./configure` enables every Linux-applicable feature; install aborts if any are omitted
 - Adds default user to all the necessary groups (`kismet`, `wireshark`, `dialout`, etc.)
 - Wired Ethernet DHCP assumed during setup to K.I.S.S. (drop to another TTY to enable WiFi)
-- Install pulls latest from official vetted repos versus baking offline install into media 
+- Install pulls latest from official vetted repos versus baking offline install into media; Kismet is compiled from upstream git (not the distribution package) 
 - Customizations for commonality with other internal tooling
 
 ### Notes:
