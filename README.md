@@ -20,7 +20,7 @@ Tool for baking install ISO of single-purpose, largely *STIG-compliant Kismet wo
 - A modern Debian-based system recommended, to generate the Kismiter ISO
 - Internet connection capable of downloading the Ubuntu Server ISO 
 - Ubuntu Pro token (required for Ubuntu's official STIG tooling; free) 
-- Wired Ethernet Internet connection for the system being imaged with the ISO
+- Wired Ethernet Internet connection (DHCP) for the system being imaged with the ISO; the installer needs working **HTTP** (port 80/443) to the Ubuntu archives (`archive.ubuntu.com`). ICMP ping may be blocked and is not required
 
 ## Usage:
 
@@ -41,9 +41,9 @@ sudo dd if=ubuntu-24.04-kismiter-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress 
 - Boot the media 
 - Prompt for new hostname if desired
 - Prompt for password for the default user
-- Prompt for a LUKS drive encryption passphrase
+- Prompt for a LUKS drive encryption passphrase (twice; a blank passphrase is rejected)
 - Prompt for Ubuntu Pro token (skip to omit STIGs)
-- Walk away, return to completed install (LUKS prompt to decrypt)
+- Walk away, return to completed install (LUKS prompt to decrypt, then the graphical GNOME login)
 
 ## Primary Tools:
 
@@ -69,6 +69,22 @@ sudo dd if=ubuntu-24.04-kismiter-YYYYMMDD.iso of=/dev/sdb bs=4M status=progress 
 - Wired Ethernet DHCP assumed during setup to K.I.S.S. (drop to another TTY to enable WiFi)
 - Install pulls latest from official vetted repos versus baking offline install into media; Kismet is compiled from upstream git (not the distribution package) 
 - Customizations for commonality with other internal tooling
+
+### Disk encryption (LUKS):
+
+- LUKS full-disk encryption is always enabled. Leaving the passphrase blank does **not** disable it; a blank passphrase is rejected and you must enter a non-empty passphrase twice
+- The installer first encrypts the disk with a random install-time key. Your passphrase is never written to `/autoinstall.yaml`; it lives only in RAM (`/run/luks-user-key`) on the live installer
+- The key swap (add your passphrase, remove the install-time key, shred both key files) is the **first** late-command, so a later failure (package, Kismet build, STIG) cannot leave the disk with only the install-time key. It never removes the install-time key unless your passphrase was added and verified first
+- After a **successful** install, first-boot unlock uses the passphrase you entered in the dialog
+- If the install dies before the key swap, the disk unlocks only with the install-time key, which exists solely in `/run/luks-install-key` on the live installer session (lost on reboot). Re-run the install rather than trying to recover that disk
+- Passphrases and key file contents are never echoed to `/var/log/setup-sh.log` or the Subiquity logs
+
+### Installer behavior:
+
+- Package updates are applied by Subiquity (`updates: all`); there is no `apt-get upgrade` late-command. `console-setup`, `console-setup-linux`, `keyboard-configuration` and `fwupd` are held during install because `console-setup` cannot configure in the installer chroot (no console) and would fail the install
+- The network check is an HTTP fetch from `archive.ubuntu.com`, not ICMP ping
+- Wired DHCP is assumed; Wi-Fi is a separate task (drop to another TTY and configure Netplan/NetworkManager)
+- The installed system boots to `graphical.target` with `gdm3` enabled (GNOME login on first boot)
 
 ### Notes:
 

@@ -43,13 +43,18 @@ echo ""
 
 # The live environment must reach the internet before we proceed: apt needs it
 # to install dialog and mkpasswd, and late-commands need it for package
-# downloads. Retry for up to 60 seconds to accommodate DHCP delays.
-echo "Checking network connectivity..."
+# downloads. Retry for up to 60 seconds to accommodate DHCP delays. The check
+# is an HTTP fetch from the Ubuntu archive rather than ICMP ping: some networks
+# pass HTTP to archive.ubuntu.com while dropping ping, and HTTP is what apt uses.
+echo "Checking network connectivity (HTTP to archive.ubuntu.com)..."
 ATTEMPTS=0
-until ping -c1 -W3 ubuntu.com >/dev/null 2>&1; do
+until curl -4 -fsS --max-time 5 -o /dev/null \
+    http://archive.ubuntu.com/ubuntu/dists/noble/Release >/dev/null 2>&1; do
   ATTEMPTS=$(( ATTEMPTS + 1 ))
   if [[ $ATTEMPTS -ge 20 ]]; then
-    echo "ERROR: No network after 60 seconds. Check Ethernet. Aborting."
+    echo "ERROR: Cannot reach http://archive.ubuntu.com after 60 seconds."
+    echo "       Check the Ethernet cable and that the network provides DHCP"
+    echo "       and allows outbound HTTP (port 80) to the Ubuntu archive. Aborting."
     exit 1
   fi
   echo "  No internet yet — retrying in 3s... (attempt ${ATTEMPTS}/20)"
@@ -93,9 +98,21 @@ while true; do
     </dev/tty1 >/dev/tty1 2>/dev/tty1
 done
 
+# Full-disk encryption is always enabled. An empty box does NOT disable LUKS; it
+# would only leave the disk with no usable unlock passphrase, so blank is rejected.
 while true; do
-  LUKS_PASS1=$(dlg --insecure --passwordbox "LUKS full-disk encryption passphrase" 10 60)
+  LUKS_PASS1=$(dlg --insecure --passwordbox \
+"LUKS full-disk encryption passphrase.
+Encryption is always enabled; leaving this blank does not turn it off.
+Enter a non-empty passphrase (you will type it at every boot)." 12 66)
   LUKS_PASS2=$(dlg --insecure --passwordbox "Confirm LUKS passphrase" 10 60)
+  if [[ -z "$LUKS_PASS1" ]]; then
+    dialog --backtitle "$BACKTITLE" --msgbox \
+"The LUKS passphrase cannot be empty. Encryption is always enabled; a blank
+passphrase does not disable it. Enter a non-empty passphrase twice." 9 66 \
+      </dev/tty1 >/dev/tty1 2>/dev/tty1
+    continue
+  fi
   [[ "$LUKS_PASS1" == "$LUKS_PASS2" ]] && break
   dialog --backtitle "$BACKTITLE" --msgbox "Passphrases do not match. Try again." 8 50 \
     </dev/tty1 >/dev/tty1 2>/dev/tty1
@@ -142,16 +159,28 @@ echo "Done."
 
 # The operator's LUKS passphrase never appears in the YAML. A random 64-char
 # hex string (YAML-safe by construction) is used as the install-time LUKS key;
-# both it and the real passphrase are written to tmpfs only. Late-commands add
-# the real passphrase as a LUKS keyslot, remove the install key, and shred both
-# files before the system first boots.
+# both it and the real passphrase are written to tmpfs only. The FIRST
+# late-command adds the real passphrase as a LUKS keyslot, removes the install
+# key, and shreds both files before the system first boots (and it never removes
+# the install key unless the add succeeded). Neither value is ever echoed or
+# logged; this script's stdout is teed to /var/log/setup-sh.log.
 echo "Preparing LUKS key material..."
+if [[ -z "$LUKS_PASS1" ]]; then
+  echo "ERROR: LUKS passphrase is empty. Refusing to continue."
+  exit 1
+fi
 LUKS_INSTALL_KEY=$(openssl rand -hex 32)
-printf '%s' "$LUKS_PASS1" > /run/luks-user-key
-chmod 0600 /run/luks-user-key
-printf '%s' "$LUKS_INSTALL_KEY" > /run/luks-install-key
-chmod 0600 /run/luks-install-key
+(
+  umask 077
+  printf '%s' "$LUKS_PASS1" > /run/luks-user-key
+  printf '%s' "$LUKS_INSTALL_KEY" > /run/luks-install-key
+)
+chmod 0600 /run/luks-user-key /run/luks-install-key
 unset LUKS_PASS1 LUKS_PASS2
+if [[ ! -s /run/luks-user-key || ! -s /run/luks-install-key ]]; then
+  echo "ERROR: LUKS key files were not written correctly. Aborting."
+  exit 1
+fi
 echo "Done."
 
 # Select the target installation disk by finding the first block device whose
@@ -188,6 +217,10 @@ cat > /autoinstall.yaml << YAML
 #cloud-config
 autoinstall:
   version: 1
+  # Let Subiquity apply package updates in its own install path instead of a
+  # late-command apt-get upgrade (whose console-setup postinst fails in the
+  # installer chroot and fails the whole install).
+  updates: all
   locale: en_US.UTF-8
   keyboard:
     layout: us
@@ -349,29 +382,73 @@ autoinstall:
     install-server: true
     allow-pw: true
   late-commands:
+YAML
+
+# LUKS key swap — deliberately the FIRST late-command, before plymouth, apt,
+# the Kismet build, or USG. If any later step fails, the disk must already
+# unlock with the operator's passphrase. Quoted heredoc: no expansion here.
+# Fail-safe rules: never remove the install key unless the operator key was
+# added and verified; a missing/empty operator key leaves the install key alone.
+# The block runs under sh (dash), so it is POSIX-only. Nothing is echoed.
+cat >> /autoinstall.yaml << 'YAML_LUKS'
+    - |
+      set -e
+      DEV=$(blkid -t TYPE=crypto_LUKS -o device | head -1)
+      if [ -z "$DEV" ]; then
+        echo "ERROR: no LUKS container found; leaving install key in place" >&2
+        exit 1
+      fi
+      if [ ! -s /run/luks-user-key ]; then
+        echo "ERROR: /run/luks-user-key is missing or empty; leaving install key in place" >&2
+        exit 0
+      fi
+      cryptsetup luksAddKey "$DEV" /run/luks-user-key --key-file /run/luks-install-key
+      cryptsetup open --test-passphrase "$DEV" --key-file /run/luks-user-key
+      cryptsetup luksRemoveKey "$DEV" --key-file /run/luks-install-key
+      shred -u /run/luks-install-key /run/luks-user-key
+YAML_LUKS
+
+cat >> /autoinstall.yaml << YAML
+    # console-setup's postinst needs a real console, which the installer chroot
+    # lacks, so any dpkg configure of these packages exits 1 and Subiquity marks
+    # the install failed. Hold them (and fwupd, which phased updates keep back)
+    # before any other in-target apt work.
+    - curtin in-target --target=/target -- apt-mark hold console-setup console-setup-linux keyboard-configuration fwupd
+
     # Plymouth provides a graphical boot splash instead of kernel log output.
     # FRAMEBUFFER=y tells the initramfs to keep the framebuffer active so
     # Plymouth can paint over it. The bgrt theme uses the system OEM logo.
-    - curtin in-target --target=/target -- apt-get install -y plymouth plymouth-themes
+    # All installs below are non-interactive and keep existing config files, so
+    # no debconf/conffile prompt can block or fail the installer chroot.
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install plymouth plymouth-themes
     - sh -c 'echo "FRAMEBUFFER=y" > /target/etc/initramfs-tools/conf.d/splash'
     - curtin in-target --target=/target -- sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/' /etc/default/grub
     - curtin in-target --target=/target -- update-alternatives --set default.plymouth /usr/share/plymouth/themes/bgrt/bgrt.plymouth || true
 
-    # Full system update before installing additional packages ensures all
-    # dependency resolution works against the latest available versions.
-    - curtin in-target --target=/target -- apt-get update
-    - curtin in-target --target=/target -- apt-get upgrade -y
+    # No apt-get update / apt-get upgrade late-commands: updates are applied by
+    # Subiquity via "updates: all" above.
+
+    # vanilla-gnome-desktop lives in universe. Ubuntu Server 24.04 sources
+    # normally include it; if not, enable it before installing.
+    - |
+      curtin in-target --target=/target -- sh -c 'grep -rqs universe /etc/apt/sources.list /etc/apt/sources.list.d/ || { env DEBIAN_FRONTEND=noninteractive apt-get -y install software-properties-common && add-apt-repository -y universe && apt-get update; }'
 
     # Core desktop and tool packages. vanilla-gnome-desktop installs stock
-    # GNOME without Ubuntu's customizations. gpsd and clients support GPS
-    # receivers attached to the system for use with Kismet.
-    - curtin in-target --target=/target -- apt-get install -y vanilla-gnome-desktop vanilla-gnome-default-settings network-manager nano openssh-server gpsd gpsd-tools gpsd-clients zstd
+    # GNOME without Ubuntu's customizations. gdm3 is the display manager.
+    # gpsd and clients support GPS receivers attached to the system for use
+    # with Kismet. (nmtui ships in network-manager; it is not its own package.)
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install vanilla-gnome-desktop vanilla-gnome-default-settings gdm3 network-manager nano openssh-server gpsd gpsd-tools gpsd-clients zstd
+
+    # Boot to the graphical target and enable GDM so the desktop starts on
+    # first boot rather than dropping to a text login.
+    - curtin in-target --target=/target -- systemctl set-default graphical.target
+    - curtin in-target --target=/target -- systemctl enable gdm3 || true
 
     # byobu is a terminal multiplexer pulled in as a dependency or suggestion
     # by some Ubuntu packages; it adds an unwanted session wrapper to the GNOME
     # terminal. gnome-console (kgx) is Ubuntu's alternative terminal that
     # duplicates gnome-terminal on vanilla GNOME — we only want one terminal.
-    - curtin in-target --target=/target -- apt-get purge -y byobu gnome-console || true
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get purge -y byobu gnome-console || true
 
     # NetworkManager handles network interfaces for the desktop session.
     # Masking systemd-networkd-wait-online prevents it from competing with
@@ -390,10 +467,12 @@ autoinstall:
     # the literal block scalar (|) prevents that by making the content opaque.
     - |
       curtin in-target --target=/target -- sh -c 'printf "Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n" > /etc/apt/preferences.d/mozilla'
+    # Refresh package lists for the newly added Mozilla repository (required so
+    # apt can see firefox from it; this is not a system upgrade).
     - curtin in-target --target=/target -- apt-get update
     - curtin in-target --target=/target -- snap remove --purge firefox || true
-    - curtin in-target --target=/target -- apt-get remove --purge -y firefox || true
-    - curtin in-target --target=/target -- apt-get install -y firefox
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get remove --purge -y firefox || true
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install firefox
 
 YAML
 
@@ -414,11 +493,12 @@ cat >> /autoinstall.yaml << 'YAML_KISMET'
       #!/bin/bash
       set -euo pipefail
       export DEBIAN_FRONTEND=noninteractive
+      export DEBCONF_NONINTERACTIVE_SEEN=true
       export TMPDIR=/var/tmp
       mkdir -p /var/tmp /usr/local/share/kismet
 
       echo "Installing Kismet build dependencies from Ubuntu archive..."
-      apt-get install -y \
+      apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install \
         build-essential git pkg-config binutils-dev \
         libwebsockets-dev zlib1g-dev libnl-3-dev libnl-genl-3-dev \
         libcap-dev libpcap-dev libnm-dev libdw-dev libsqlite3-dev \
@@ -628,7 +708,7 @@ cat >> /autoinstall.yaml << 'YAML_POST_KISMET'
     # Wireshark GUI and CLI packet analysis. The install-setuid selection allows
     # members of the wireshark group to open capture interfaces without sudo.
     - curtin in-target --target=/target -- sh -c 'echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections'
-    - curtin in-target --target=/target -- apt-get install -y wireshark
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install wireshark
 
     # Google Earth Pro — KML/KMZ viewing for Kismet wireless survey output.
     # Key fetched via wget and dearmored directly into /etc/apt/keyrings to
@@ -638,7 +718,7 @@ cat >> /autoinstall.yaml << 'YAML_POST_KISMET'
     - curtin in-target --target=/target -- sh -c 'wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor > /etc/apt/keyrings/google-earth.gpg'
     - curtin in-target --target=/target -- sh -c 'echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/google-earth.gpg] https://dl.google.com/linux/earth/deb/ stable main" > /etc/apt/sources.list.d/google-earth.list'
     - curtin in-target --target=/target -- apt-get update
-    - curtin in-target --target=/target -- apt-get install -y google-earth-pro-stable
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install google-earth-pro-stable
 
     # Add defender to all groups that gate privileged hardware access:
     #   kismet    — raw packet capture via Kismet without sudo
@@ -654,11 +734,11 @@ cat >> /autoinstall.yaml << 'YAML_POST_KISMET'
     # files that may not yet have reached the Ubuntu package.
     # NOTE: adapter functionality with this firmware is unconfirmed — verify
     # after install that the adapter appears and associates correctly.
-    - curtin in-target --target=/target -- apt-get install -y --reinstall linux-firmware
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install --reinstall linux-firmware
     # HWE kernel for contemporary hardware driver support. Must be installed
     # before firmware decompression steps below — the HWE linux-firmware
     # dependency pull may update the .zst blobs that need unpacking.
-    - curtin in-target --target=/target -- apt-get install -y linux-generic-hwe-24.04
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install linux-generic-hwe-24.04
     # Ubuntu ships these MT7961 firmware blobs as .zst-compressed files but does
     # not decompress them automatically on install, leaving the kernel unable to
     # load the firmware at runtime. Fetch from upstream linux-firmware git first;
@@ -680,8 +760,8 @@ cat >> /autoinstall.yaml << 'YAML_POST_KISMET'
 
     # cloud-init is not needed outside cloud environments and adds boot latency.
     # autoremove cleans up orphaned dependencies left behind by purged packages.
-    - curtin in-target --target=/target -- apt-get purge -y cloud-init
-    - curtin in-target --target=/target -- apt-get autoremove -y
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get purge -y cloud-init
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive apt-get autoremove -y
 
 YAML_POST_KISMET
 
@@ -752,7 +832,7 @@ PYEOF
     # Enable only the usg entitlement. Enabling individually avoids pulling in
     # ESM, Livepatch, and other services that are unnecessary on this host.
     - curtin in-target --target=/target -- pro enable usg --assume-yes
-    - curtin in-target --target=/target -- apt-get install -y usg
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install usg
 
     # usg fix applies all automatable DISA STIG controls. This step takes
     # 15-30 minutes. Some controls require a reboot or manual action and will
@@ -796,16 +876,8 @@ PYEOF
 YAML_PRO
 fi
 
-# ── Shared tail: LUKS key swap, dconf, initramfs, GRUB ───────────────────────
+# ── Shared tail: dconf, initramfs, GRUB (LUKS swap is the first late-command) ───────────────────────
 cat >> /autoinstall.yaml << YAML
-    # Replace the random install-time LUKS key with the operator's real
-    # passphrase. blkid finds the LUKS container dynamically so this works
-    # regardless of the disk's kernel name. Both key files live only in tmpfs
-    # (RAM); shredding them is belt-and-suspenders but correct practice.
-    - sh -c 'LUKS_DEV=\$(blkid -t TYPE=crypto_LUKS -o device | head -1); cryptsetup luksAddKey \$LUKS_DEV /run/luks-user-key --key-file /run/luks-install-key'
-    - sh -c 'LUKS_DEV=\$(blkid -t TYPE=crypto_LUKS -o device | head -1); cryptsetup luksRemoveKey \$LUKS_DEV --key-file /run/luks-install-key'
-    - sh -c 'shred -u /run/luks-install-key /run/luks-user-key'
-
     # GNOME system-wide defaults via dconf. Writing to /etc/dconf/db/local.d/
     # sets defaults visible to all users without locking them — defender can
     # override these settings after first login via GNOME Settings. The dconf
