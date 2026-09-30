@@ -43,8 +43,8 @@ echo ""
 
 # The live environment must reach the internet before we proceed: apt needs it
 # to install dialog and mkpasswd, and late-commands need it for package
-# downloads. Retry for up to 60 seconds to accommodate DHCP delays. The check
-# is an HTTP fetch from the Ubuntu archive rather than ICMP ping: some networks
+# downloads. Retry up to 20 times (~160 seconds worst case: 5s curl timeout plus
+# 3s pause each) to accommodate DHCP delays. The check is an HTTP fetch from the Ubuntu archive rather than ICMP ping: some networks
 # pass HTTP to archive.ubuntu.com while dropping ping, and HTTP is what apt uses.
 echo "Checking network connectivity (HTTP to archive.ubuntu.com)..."
 ATTEMPTS=0
@@ -52,7 +52,7 @@ until curl -4 -fsS --max-time 5 -o /dev/null \
     http://archive.ubuntu.com/ubuntu/dists/noble/Release >/dev/null 2>&1; do
   ATTEMPTS=$(( ATTEMPTS + 1 ))
   if [[ $ATTEMPTS -ge 20 ]]; then
-    echo "ERROR: Cannot reach http://archive.ubuntu.com after 60 seconds."
+    echo "ERROR: Cannot reach http://archive.ubuntu.com after ${ATTEMPTS} attempts (~160 seconds)."
     echo "       Check the Ethernet cable and that the network provides DHCP"
     echo "       and allows outbound HTTP (port 80) to the Ubuntu archive. Aborting."
     exit 1
@@ -405,7 +405,7 @@ cat >> /autoinstall.yaml << 'YAML_LUKS'
       cryptsetup luksAddKey "$DEV" /run/luks-user-key --key-file /run/luks-install-key
       cryptsetup open --test-passphrase "$DEV" --key-file /run/luks-user-key
       cryptsetup luksRemoveKey "$DEV" --key-file /run/luks-install-key
-      shred -u /run/luks-install-key /run/luks-user-key
+      shred -u /run/luks-install-key /run/luks-user-key || true
 YAML_LUKS
 
 cat >> /autoinstall.yaml << YAML
@@ -414,6 +414,9 @@ cat >> /autoinstall.yaml << YAML
     # the install failed. Hold them (and fwupd, which phased updates keep back)
     # before any other in-target apt work.
     - curtin in-target --target=/target -- apt-mark hold console-setup console-setup-linux keyboard-configuration fwupd
+    # Finish any half-configured packages left over from the installer's own apt
+    # run; non-fatal because the held packages are skipped by design.
+    - curtin in-target --target=/target -- env DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true dpkg --configure -a || true
 
     # Plymouth provides a graphical boot splash instead of kernel log output.
     # FRAMEBUFFER=y tells the initramfs to keep the framebuffer active so
@@ -431,7 +434,7 @@ cat >> /autoinstall.yaml << YAML
     # vanilla-gnome-desktop lives in universe. Ubuntu Server 24.04 sources
     # normally include it; if not, enable it before installing.
     - |
-      curtin in-target --target=/target -- sh -c 'grep -rqs universe /etc/apt/sources.list /etc/apt/sources.list.d/ || { env DEBIAN_FRONTEND=noninteractive apt-get -y install software-properties-common && add-apt-repository -y universe && apt-get update; }'
+      curtin in-target --target=/target -- sh -c 'grep -rqs universe /etc/apt/sources.list /etc/apt/sources.list.d/ || { export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true; apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold install software-properties-common && add-apt-repository -y universe && apt-get update; }'
 
     # Core desktop and tool packages. vanilla-gnome-desktop installs stock
     # GNOME without Ubuntu's customizations. gdm3 is the display manager.
